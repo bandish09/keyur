@@ -1,3 +1,4 @@
+sqlite manager for mac : https://sqlitemanager.en.softonic.com/mac
 
 Introduction
 Sqlite can be used in iOS for handling data. It just uses the sqlite queries which make it easier for those who know sql.
