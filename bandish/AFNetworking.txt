@@ -1,0 +1,16 @@
+Get and post method using afnetworking 3.0
+
+
+AFHTTPSessionManager *manager = [AFHTTPSessionManager manager]; [manager GET:@"http://example.com/resources.json" parameters:nil progress:nil success:^(NSURLSessionTask *task, id responseObject) { NSLog(@"JSON: %@", responseObject); } failure:^(NSURLSessionTask *operation, NSError *error) { NSLog(@"Error: %@", error); }];
+
+
+POST 
+AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+ NSDictionary *parameters = @{@"foo": @"bar", @"key": @"value"};
+[manager POST:@"http://example.com/resources.json" parameters:parameters progress:nil success:^(NSURLSessionDataTask *task, id responseObject) { NSLog(@"Success: %@", responseObject); } failure:^(NSURLSessionDataTask *task, NSError *error) { NSLog(@"Error: %@", error); }]
+
+
+POST form data
+AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+ NSDictionary *parameters = @{@"foo": @"bar"};
+ NSURL *filePath = [NSURL fileURLWithPath:@"file://path/to/image.png"]; [manager POST:@"http://example.com/resources.json" parameters:parameters constructingBodyWithBlock:^(id<AFMultipartFormData> formData) { [formData appendPartWithFileURL:filePath name:@"image" error:nil]; } progress:nil success:^(NSURLSessionDataTask *operation, id responseObject) { NSLog(@"Success: %@", responseObject); } failure:^(NSURLSessionDataTask *operation, NSError *error) { NSLog(@"Error: %@", error); }];
