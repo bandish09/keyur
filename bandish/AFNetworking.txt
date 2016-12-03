@@ -1,4 +1,5 @@
 Core data
+=====================================================================================
 without relation ship
 http://www.appcoda.com/introduction-to-core-data/
 
@@ -6,10 +7,20 @@ with relation ship table
 https://code.tutsplus.com/series/core-data-from-scratch--cms-653
 
 
+AWS
+=================================================================================
+https://www.youtube.com/watch?v=WZ54fH8AFUk
+
+login into consol aws
+select s3 service
+create bucket after that select service from services "cognito"
+and create identiti pool then go to
+IAM(identiti access and management)
+select roll-> select user -> manage policy -> update permission to "s3:*"
 
 
 Get and post method using afnetworking 3.0
-
+==================================================
 
 AFHTTPSessionManager *manager = [AFHTTPSessionManager manager]; [manager GET:@"http://example.com/resources.json" parameters:nil progress:nil success:^(NSURLSessionTask *task, id responseObject) { NSLog(@"JSON: %@", responseObject); } failure:^(NSURLSessionTask *operation, NSError *error) { NSLog(@"Error: %@", error); }];
 
