@@ -1,3 +1,13 @@
+Core data
+without relation ship
+http://www.appcoda.com/introduction-to-core-data/
+
+with relation ship table
+https://code.tutsplus.com/series/core-data-from-scratch--cms-653
+
+
+
+
 Get and post method using afnetworking 3.0
 
 
