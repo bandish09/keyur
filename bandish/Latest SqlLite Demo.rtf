@@ -1,0 +1,346 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf390
+{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;\f1\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green116\blue0;\red100\green56\blue32;\red196\green26\blue22;
+\red170\green13\blue145;\red28\green0\blue207;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\deftab529
+\pard\tx529\pardeftab529\pardirnatural
+
+\f0\fs22 \cf2 \CocoaLigature0 \
+\pard\pardeftab720\ri60\sl560\sa60
+
+\f1\fs38 \cf0 \CocoaLigature1 \shad\shadx20\shady-20\shadr40\shado255 \shadc0 Introduction\
+\pard\pardeftab720\sa240\qj
+
+\fs24 \cf0 \shad0 Sqlite can be used in iOS for handling data. It just uses the sqlite queries which make it easier for those who know sql.\
+\pard\pardeftab720\sl560\sa380\qj
+
+\fs38 \cf0 \shad\shadx20\shady-20\shadr40\shado255 \shadc0 Steps Involved\
+\pard\pardeftab720\sa240\qj
+
+\fs24 \cf0 \shad0 1. Create a simple 
+\b View based application
+\b0 .\
+2. Select your project file, then select targets and then add 
+\b libsqlite3.dylib
+\b0  library in choose frameworks.\
+3. Now create a new file by selecting File-> New -> File... -> select 
+\b Objective C class
+\b0  and click next\
+4. Name the class as 
+\b DBManager
+\b0  with 
+\b "sub class of"
+\b0  as NSObject.\
+5. Select create.\
+6. Now update 
+\b DBManager.h
+\b0  as follows.
+\f0\fs22 \cf2 \CocoaLigature0 \
+\pard\tx529\pardeftab529\pardirnatural
+\cf2 ****************************************************************\
+//\cf0 \
+\cf2 //  DBManager.h\cf0 \
+\cf2 //  MobileRinger\cf0 \
+\cf2 //\cf0 \
+\cf2 //  Created by waycreon on 3/26/14.\cf0 \
+\cf2 //  Copyright (c) 2014 waycreon. All rights reserved.\cf0 \
+\cf2 //\cf0 \
+\
+\cf3 #import \cf4 <Foundation/Foundation.h>\cf3 \
+#import \cf4 <sqlite3.h>\cf3 \
+\cf0 \
+\
+\cf5 @interface\cf0  DBManager : NSObject\
+\{\
+    NSString *databasePath;\
+\}\
+\
++(DBManager*)getSharedInstance;\
+-(\cf5 BOOL\cf0 )createDB;\
+-(\cf5 BOOL\cf0 )saveData:(NSString*)name\
+      latitude:(NSString*)latitude longitude:(NSString*)longitude;\
+-(NSArray*)fetch_data;\
+-(\cf5 BOOL\cf0 ) delete_record:(NSString*)destination_id;\
+-(\cf5 BOOL\cf0 )updateData:(NSString *)Dest_ID name:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude;\
+-(\cf5 int\cf0 )search_data:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude;\
+\cf5 @end\cf0 \
+\cf2 \
+\
+\
+*************************************************************************\
+\pard\pardeftab720\sa240\qj
+
+\f1\fs24 \cf0 \CocoaLigature1 7. Now update 
+\b DBManager.m
+\b0  as follows\
+\pard\tx529\pardeftab529\pardirnatural
+
+\f0\fs22 \cf2 \CocoaLigature0 \
+\
+\
+\
+//\cf0 \
+\cf2 //  DBManager.m\cf0 \
+\cf2 //  MobileRinger\cf0 \
+\cf2 //\cf0 \
+\cf2 //  Created by waycreon on 3/26/14.\cf0 \
+\cf2 //  Copyright (c) 2014 waycreon. All rights reserved.\cf0 \
+\cf2 //\cf0 \
+\
+\cf3 #import \cf4 "DBManager.h"\cf3 \
+\cf0 \
+\cf5 static\cf0  DBManager *sharedInstance = \cf5 nil\cf0 ;\
+\cf5 static\cf0  sqlite3 *database = \cf5 nil\cf0 ;\
+\cf5 static\cf0  sqlite3_stmt *statement = \cf5 nil\cf0 ;\
+\
+\cf5 @implementation\cf0  DBManager\
+\
++(DBManager*)getSharedInstance\{\
+    \cf5 if\cf0  (!sharedInstance) \{\
+        sharedInstance = [[\cf5 super\cf0  allocWithZone:\cf5 NULL\cf0 ]init];\
+        [sharedInstance createDB];\
+    \}\
+	\cf5 return\cf0  sharedInstance;\
+\}\
+\
+-(\cf5 BOOL\cf0 )createDB\{\
+    NSString *docsDir;\
+    NSArray *dirPaths;\
+\
+    \cf2 // Get the documents directory\cf0 \
+    dirPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, \cf5 YES\cf0 );\
+    docsDir = dirPaths[\cf6 0\cf0 ];\
+\
+    \cf2 //Build the path to the database file\cf0 \
+    databasePath = [[NSString alloc] initWithString:[docsDir stringByAppendingPathComponent: \cf4 @"student.db"\cf0 ]];\
+    \cf5 BOOL\cf0  isSuccess = \cf5 YES\cf0 ;\
+    NSFileManager *filemgr = [NSFileManager defaultManager];\
+    \cf5 if\cf0  ([filemgr fileExistsAtPath: databasePath ] == \cf5 NO\cf0 )\
+    \{\
+        \cf5 const\cf0  \cf5 char\cf0  *dbpath = [databasePath UTF8String];\
+        \cf5 if\cf0  (sqlite3_open(dbpath, &database) == SQLITE_OK)\
+        \{\
+            \cf5 char\cf0  *errMsg;\
+            \cf5 const\cf0  \cf5 char\cf0  *sql_stmt =\cf4 "create table if not exists tbl_Destination (id integer primary key, name text, latitude text, longitude text)"\cf0 ;\
+            \cf5 if\cf0  (sqlite3_exec(database, sql_stmt, \cf5 NULL\cf0 , \cf5 NULL\cf0 , &errMsg)!= SQLITE_OK)\
+            \{\
+                isSuccess = \cf5 NO\cf0 ;\
+                NSLog(\cf4 @"Failed to create table"\cf0 );\
+                sqlite3_close(database);\
+                \cf5 return\cf0   isSuccess;\
+            \}\
+            \cf5 else\cf0  \{\
+                isSuccess = \cf5 NO\cf0 ;\
+                NSLog(\cf4 @"Failed to open/create database"\cf0 );\
+            \}\
+        \}\
+        \cf5 return\cf0  isSuccess;\
+    \}\
+    \cf5 return\cf0  isSuccess;\
+\}\
+\
+-(\cf5 BOOL\cf0 )saveData:(NSString *)name latitude:(NSString *)latitude longitude:(NSString *)longitude\{\
+    \cf5 const\cf0  \cf5 char\cf0  *dbpath = [databasePath UTF8String];\
+    \cf5 if\cf0  (sqlite3_open(dbpath, &database) == SQLITE_OK)\
+    \{\
+        NSString *insertSQL = [NSString stringWithFormat:\cf4 @"insert into tbl_Destination (name, latitude, longitude) values(\\"%@\\", \\"%@\\", \\"%@\\")"\cf0 ,name, latitude, longitude];\
+        \
+        NSLog(\cf4 @"insert sql   %@"\cf0 ,insertSQL);\
+        \
+        \cf5 const\cf0  \cf5 char\cf0  *insert_stmt = [insertSQL UTF8String];\
+        sqlite3_prepare_v2(database, insert_stmt,-\cf6 1\cf0 , &statement, \cf5 NULL\cf0 );\
+        \cf5 if\cf0  (sqlite3_step(statement) == SQLITE_DONE)\
+        \{\
+            \cf5 return\cf0  \cf5 YES\cf0 ;\
+        \}\
+        \cf5 else\cf0  \{\
+            \cf5 return\cf0  \cf5 NO\cf0 ;\
+        \}\
+        sqlite3_reset(statement);\
+    \}\
+    \cf5 return\cf0  \cf5 NO\cf0 ;\
+\}\
+\
+-(NSArray*) fetch_data\
+\{\
+    \cf5 const\cf0  \cf5 char\cf0  *dbpath = [databasePath UTF8String];\
+    \cf5 if\cf0  (sqlite3_open(dbpath, &database) == SQLITE_OK)\
+    \{\
+        sqlite3_stmt *insertStatement;\
+        NSMutableDictionary *record_dict;\
+        NSString *querySQL = [NSString stringWithFormat:\cf4 @"select * from tbl_Destination"\cf0 ];\
+        \cf5 const\cf0  \cf5 char\cf0  *query_stmt = [querySQL UTF8String];\
+        NSMutableArray *resultArray = [[NSMutableArray alloc]init];\
+        \cf5 if\cf0  (sqlite3_prepare_v2(database,\
+                               query_stmt, -\cf6 1\cf0 , &insertStatement, \cf5 NULL\cf0 ) == SQLITE_OK)\
+        \{\
+            \cf5 while\cf0 (sqlite3_step(insertStatement) == SQLITE_ROW)\
+            \{\
+\
+                record_dict=[[NSMutableDictionary alloc]init];\
+                \
+                NSString *ID = [[NSString alloc] initWithUTF8String:\
+                                  (\cf5 const\cf0  \cf5 char\cf0  *) sqlite3_column_text(insertStatement, \cf6 0\cf0 )];\
+                \cf2 //[resultArray addObject:ID];\cf0 \
+                \
+                NSString *name = [[NSString alloc] initWithUTF8String:\
+                                  (\cf5 const\cf0  \cf5 char\cf0  *) sqlite3_column_text(insertStatement, \cf6 1\cf0 )];\
+                \cf2 //[resultArray addObject:name];\cf0 \
+                NSString *latitude = [[NSString alloc] initWithUTF8String:\
+                                        (\cf5 const\cf0  \cf5 char\cf0  *) sqlite3_column_text(insertStatement, \cf6 2\cf0 )];\
+                \cf2 //[resultArray addObject:latitude];\cf0 \
+                NSString *longitude = [[NSString alloc]initWithUTF8String:\
+                                  (\cf5 const\cf0  \cf5 char\cf0  *) sqlite3_column_text(insertStatement, \cf6 3\cf0 )];\
+                \cf2 //[resultArray addObject:longitude];\cf0 \
+                \
+                [record_dict setValue:ID forKey:\cf4 @"ID"\cf0 ];\
+                [record_dict setValue:name forKey:\cf4 @"name"\cf0 ];\
+                [record_dict setValue:latitude forKey:\cf4 @"latitude"\cf0 ];\
+                [record_dict setValue:longitude forKey:\cf4 @"longitude"\cf0 ];\
+                [resultArray addObject:record_dict];\
+            \}\
+            \cf5 return\cf0  resultArray;\
+            \cf2 //sqlite3_reset(statement);\cf0 \
+            sqlite3_finalize(insertStatement);\
+        \}\
+        \cf5 else\cf0 \{\
+            sqlite3_finalize(insertStatement);\
+            \cf5 return\cf0  \cf5 nil\cf0 ;\
+        \}\
+        \
+    \}\
+\
+    \cf5 return\cf0  \cf5 nil\cf0 ;\
+\
+\}\
+\
+-(\cf5 int\cf0 )search_data:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude\{\
+    NSLog(\cf4 @"search data call"\cf0 );\
+    \cf5 if\cf0  (sqlite3_open([databasePath UTF8String], &database) == SQLITE_OK) \{\
+        NSString *search_qry = [NSString stringWithFormat:\cf4 @"select id from tbl_Destination where name= \\'%@\\',latitude = \\'%@\\',longitude = \\'%@\\' "\cf0 ,name,latitude,longitude];\
+        sqlite3_stmt *SearchStatement;\
+        \cf5 if\cf0 (sqlite3_prepare_v2(database, [search_qry UTF8String], -\cf6 1\cf0 , &SearchStatement, \cf5 NULL\cf0 ) == SQLITE_OK)\{\
+            \cf5 while\cf0 (sqlite3_step(SearchStatement) == SQLITE_ROW)\
+            \{\
+                NSString *ID = [[NSString alloc] initWithUTF8String:\
+                                (\cf5 const\cf0  \cf5 char\cf0  *) sqlite3_column_text(SearchStatement, \cf6 0\cf0 )];\
+                \cf5 return\cf0  [ID intValue];\
+            \}\
+        \}\
+        \
+    \}\
+    \cf5 return\cf0  \cf6 0\cf0 ;\
+\}\
+\
+-(\cf5 BOOL\cf0 ) delete_record:(NSString*)destination_id\
+\{\
+\cf2 /*\
+    if (sqlite3_open([databasePath UTF8String], &database ) == SQLITE_OK) \{\}\
+    \
+    if(statement == nil)\
+    \{\
+        \
+        NSString *deleteStatementNS = [NSString stringWithFormat:\
+                                       @"delete from tbl_postoffice where type = '%@'",\
+                                       urusniqIDentifire];\
+        const char *sql = [deleteStatementNS UTF8String];\
+        \
+        //const char *sql ="delete from tbl_todo where type = yourDbfildeRecored";\
+        if(sqlite3_prepare_v2(database, sql, -1, &deleteStmt, NULL) != SQLITE_OK)\
+            NSAssert1(0, @"Error while creating delete statement. '%s'", sqlite3_errmsg(database));\
+    \}\
+    \
+    //When binding parameters, index starts from 1 and not zero.\
+    sqlite3_bind_text(deleteStmt, 1, [[d valueForKey:@"type"] UTF8String], -1, SQLITE_TRANSIENT);\
+    if (SQLITE_DONE != sqlite3_step(deleteStmt))\
+        NSAssert1(0, @"Error while deleting. '%s'", sqlite3_errmsg(database));\
+    \
+    sqlite3_reset(deleteStmt);\
+    */\cf0 \
+    \
+    \cf2 /*\
+        NSString *temp_delete_qry=@"delete from studentsDetail";\
+        const char *delete_qry=[temp_delete_qry UTF8String];\
+        if (sqlite3_prepare16_v2(database, delete_qry, -1, &statement, NULL)==SQLITE_OK) \{\
+            NSLog(@"delete successfully");\
+            return TRUE;\
+        \}\
+        else\{\
+            return FALSE;\
+        \}\
+        return TRUE;\
+    */\cf0 \
+    \
+    \
+    \
+    \
+    \
+    \cf5 if\cf0  (sqlite3_open([databasePath UTF8String], &database ) == SQLITE_OK) \{\
+        \
+        \cf2 //sqlite3_stmt *deleteStatement;\cf0 \
+        \
+        NSString *deleteQuery = [NSString stringWithFormat:\cf4 @"DELETE FROM tbl_Destination where id= %@"\cf0 ,destination_id];\
+        \cf5 if\cf0  (sqlite3_prepare_v2(database ,[deleteQuery  UTF8String], -\cf6 1\cf0 , &statement, \cf5 NULL\cf0 ) == SQLITE_OK)\
+        \{\
+            \
+            \cf2 //            //When binding parameters, index starts from 1 and not zero.\cf0 \
+            \cf2 //            sqlite3_bind_text(deleteStatement, 1, [name UTF8String], -1, SQLITE_TRANSIENT);\cf0 \
+            \
+            \cf5 if\cf0  (SQLITE_DONE == sqlite3_step(statement))\{\
+                \
+                NSLog(\cf4 @"contact deleted successfully"\cf0 );\
+                \cf5 return\cf0  \cf5 TRUE\cf0 ;\
+            \}\
+        \}\
+        \cf5 else\cf0 \{\
+            \
+            NSLog(\cf4 @"not deleted.."\cf0 );\
+            \cf5 return\cf0  \cf5 FALSE\cf0 ;\
+        \}\
+    \}\
+    NSLog(\cf4 @"database not open"\cf0 );\
+    sqlite3_reset(statement);\
+    \cf5 return\cf0  \cf5 FALSE\cf0 ;\
+\}\
+\
+-(\cf5 BOOL\cf0 )updateData:(NSString *)Dest_ID name:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude\
+\{\
+    NSLog(\cf4 @"dest id::  %@"\cf0 ,Dest_ID);\
+    NSLog(\cf4 @"name  %@"\cf0 ,name);\
+    \
+    \cf5 if\cf0 (sqlite3_open([databasePath UTF8String],&database )==SQLITE_OK)\
+    \{\
+        \
+        NSString *query = [NSString stringWithFormat:\cf4 @"UPDATE tbl_Destination SET name='%@',latitude='%@',longitude = '%@' where id='%@' "\cf0 ,name,latitude,longitude,Dest_ID];\
+        \cf2 //NSString *query=@"UPDATE tbl_Destination SET name='SuratTTT, Gujarat, India' , latitude = '21.195000' , longitude = '72.819443' where id='1' ";\cf0 \
+        \cf5 const\cf0  \cf5 char\cf0  *query_statement=[query UTF8String];\
+                           \
+                           \cf5 if\cf0 (sqlite3_prepare_v2(database, query_statement, -\cf6 1\cf0 , &statement, \cf5 NULL\cf0 )==SQLITE_OK)\
+                           \{\
+                               \cf5 while\cf0 (sqlite3_step(statement) == SQLITE_DONE)\
+                               \{\
+                                   \cf5 return\cf0  \cf5 YES\cf0 ;\
+                               \}\
+                               sqlite3_finalize(statement);\
+                           \}\
+                           \}\
+    \cf5 return\cf0  \cf5 FALSE\cf0 ;\
+\}\
+\
+\cf5 @end\cf0 \
+\
+\cf2 //-(Boolean)delete:(NSString *)destination\cf0 \
+\cf2 //\{\cf0 \
+\cf2 //    NSString *temp_delete_qry=@"delete from studentsDetail";\cf0 \
+\cf2 //    const char *delete_qry=[temp_delete_qry UTF8String];\cf0 \
+\cf2 //    if (sqlite3_prepare16_v2(database, delete_qry, -1, &statement, NULL)==SQLITE_OK) \{\cf0 \
+\cf2 //        NSLog(@"delete successfully");\cf0 \
+\cf2 //        return TRUE;\cf0 \
+\cf2 //    \}\cf0 \
+\cf2 //    else\{\cf0 \
+\cf2 //        return FALSE;\cf0 \
+\cf2 //    \}\cf0 \
+\cf2 //    return TRUE;\cf0 \
+\cf2 //\}\cf0 \
+}
