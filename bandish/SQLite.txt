@@ -1,0 +1,309 @@
+
+Introduction
+Sqlite can be used in iOS for handling data. It just uses the sqlite queries which make it easier for those who know sql.
+Steps Involved
+1. Create a simple View based application.
+2. Select your project file, then select targets and then add libsqlite3.dylib library in choose frameworks.
+3. Now create a new file by selecting File-> New -> File... -> select Objective C class and click next
+4. Name the class as DBManager with "sub class of" as NSObject.
+5. Select create.
+6. Now update DBManager.h as follows.
+****************************************************************
+//
+//  DBManager.h
+//  MobileRinger
+//
+//  Created by waycreon on 3/26/14.
+//  Copyright (c) 2014 waycreon. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import <sqlite3.h>
+
+
+@interface DBManager : NSObject
+{
+    NSString *databasePath;
+}
+
++(DBManager*)getSharedInstance;
+-(BOOL)createDB;
+-(BOOL)saveData:(NSString*)name
+      latitude:(NSString*)latitude longitude:(NSString*)longitude;
+-(NSArray*)fetch_data;
+-(BOOL) delete_record:(NSString*)destination_id;
+-(BOOL)updateData:(NSString *)Dest_ID name:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude;
+-(int)search_data:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude;
+@end
+
+
+
+*************************************************************************
+7. Now update DBManager.m as follows
+
+
+
+
+//
+//  DBManager.m
+//  MobileRinger
+//
+//  Created by waycreon on 3/26/14.
+//  Copyright (c) 2014 waycreon. All rights reserved.
+//
+
+#import "DBManager.h"
+
+static DBManager *sharedInstance = nil;
+static sqlite3 *database = nil;
+static sqlite3_stmt *statement = nil;
+
+@implementation DBManager
+
++(DBManager*)getSharedInstance{
+    if (!sharedInstance) {
+        sharedInstance = [[super allocWithZone:NULL]init];
+        [sharedInstance createDB];
+    }
+	return sharedInstance;
+}
+
+-(BOOL)createDB{
+    NSString *docsDir;
+    NSArray *dirPaths;
+
+    // Get the documents directory
+    dirPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    docsDir = dirPaths[0];
+
+    //Build the path to the database file
+    databasePath = [[NSString alloc] initWithString:[docsDir stringByAppendingPathComponent: @"student.db"]];
+    BOOL isSuccess = YES;
+    NSFileManager *filemgr = [NSFileManager defaultManager];
+    if ([filemgr fileExistsAtPath: databasePath ] == NO)
+    {
+        const char *dbpath = [databasePath UTF8String];
+        if (sqlite3_open(dbpath, &database) == SQLITE_OK)
+        {
+            char *errMsg;
+            const char *sql_stmt ="create table if not exists tbl_Destination (id integer primary key, name text, latitude text, longitude text)";
+            if (sqlite3_exec(database, sql_stmt, NULL, NULL, &errMsg)!= SQLITE_OK)
+            {
+                isSuccess = NO;
+                NSLog(@"Failed to create table");
+                sqlite3_close(database);
+                return  isSuccess;
+            }
+            else {
+                isSuccess = NO;
+                NSLog(@"Failed to open/create database");
+            }
+        }
+        return isSuccess;
+    }
+    return isSuccess;
+}
+
+-(BOOL)saveData:(NSString *)name latitude:(NSString *)latitude longitude:(NSString *)longitude{
+    const char *dbpath = [databasePath UTF8String];
+    if (sqlite3_open(dbpath, &database) == SQLITE_OK)
+    {
+        NSString *insertSQL = [NSString stringWithFormat:@"insert into tbl_Destination (name, latitude, longitude) values(\"%@\", \"%@\", \"%@\")",name, latitude, longitude];
+        
+        NSLog(@"insert sql   %@",insertSQL);
+        
+        const char *insert_stmt = [insertSQL UTF8String];
+        sqlite3_prepare_v2(database, insert_stmt,-1, &statement, NULL);
+        if (sqlite3_step(statement) == SQLITE_DONE)
+        {
+            return YES;
+        }
+        else {
+            return NO;
+        }
+        sqlite3_reset(statement);
+    }
+    return NO;
+}
+
+-(NSArray*) fetch_data
+{
+    const char *dbpath = [databasePath UTF8String];
+    if (sqlite3_open(dbpath, &database) == SQLITE_OK)
+    {
+        sqlite3_stmt *insertStatement;
+        NSMutableDictionary *record_dict;
+        NSString *querySQL = [NSString stringWithFormat:@"select * from tbl_Destination"];
+        const char *query_stmt = [querySQL UTF8String];
+        NSMutableArray *resultArray = [[NSMutableArray alloc]init];
+        if (sqlite3_prepare_v2(database,
+                               query_stmt, -1, &insertStatement, NULL) == SQLITE_OK)
+        {
+            while(sqlite3_step(insertStatement) == SQLITE_ROW)
+            {
+
+                record_dict=[[NSMutableDictionary alloc]init];
+                
+                NSString *ID = [[NSString alloc] initWithUTF8String:
+                                  (const char *) sqlite3_column_text(insertStatement, 0)];
+                //[resultArray addObject:ID];
+                
+                NSString *name = [[NSString alloc] initWithUTF8String:
+                                  (const char *) sqlite3_column_text(insertStatement, 1)];
+                //[resultArray addObject:name];
+                NSString *latitude = [[NSString alloc] initWithUTF8String:
+                                        (const char *) sqlite3_column_text(insertStatement, 2)];
+                //[resultArray addObject:latitude];
+                NSString *longitude = [[NSString alloc]initWithUTF8String:
+                                  (const char *) sqlite3_column_text(insertStatement, 3)];
+                //[resultArray addObject:longitude];
+                
+                [record_dict setValue:ID forKey:@"ID"];
+                [record_dict setValue:name forKey:@"name"];
+                [record_dict setValue:latitude forKey:@"latitude"];
+                [record_dict setValue:longitude forKey:@"longitude"];
+                [resultArray addObject:record_dict];
+            }
+            return resultArray;
+            //sqlite3_reset(statement);
+            sqlite3_finalize(insertStatement);
+        }
+        else{
+            sqlite3_finalize(insertStatement);
+            return nil;
+        }
+        
+    }
+
+    return nil;
+
+}
+
+-(int)search_data:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude{
+    NSLog(@"search data call");
+    if (sqlite3_open([databasePath UTF8String], &database) == SQLITE_OK) {
+        NSString *search_qry = [NSString stringWithFormat:@"select id from tbl_Destination where name= \'%@\',latitude = \'%@\',longitude = \'%@\' ",name,latitude,longitude];
+        sqlite3_stmt *SearchStatement;
+        if(sqlite3_prepare_v2(database, [search_qry UTF8String], -1, &SearchStatement, NULL) == SQLITE_OK){
+            while(sqlite3_step(SearchStatement) == SQLITE_ROW)
+            {
+                NSString *ID = [[NSString alloc] initWithUTF8String:
+                                (const char *) sqlite3_column_text(SearchStatement, 0)];
+                return [ID intValue];
+            }
+        }
+        
+    }
+    return 0;
+}
+
+-(BOOL) delete_record:(NSString*)destination_id
+{
+/*
+    if (sqlite3_open([databasePath UTF8String], &database ) == SQLITE_OK) {}
+    
+    if(statement == nil)
+    {
+        
+        NSString *deleteStatementNS = [NSString stringWithFormat:
+                                       @"delete from tbl_postoffice where type = '%@'",
+                                       urusniqIDentifire];
+        const char *sql = [deleteStatementNS UTF8String];
+        
+        //const char *sql ="delete from tbl_todo where type = yourDbfildeRecored";
+        if(sqlite3_prepare_v2(database, sql, -1, &deleteStmt, NULL) != SQLITE_OK)
+            NSAssert1(0, @"Error while creating delete statement. '%s'", sqlite3_errmsg(database));
+    }
+    
+    //When binding parameters, index starts from 1 and not zero.
+    sqlite3_bind_text(deleteStmt, 1, [[d valueForKey:@"type"] UTF8String], -1, SQLITE_TRANSIENT);
+    if (SQLITE_DONE != sqlite3_step(deleteStmt))
+        NSAssert1(0, @"Error while deleting. '%s'", sqlite3_errmsg(database));
+    
+    sqlite3_reset(deleteStmt);
+    */
+    
+    /*
+        NSString *temp_delete_qry=@"delete from studentsDetail";
+        const char *delete_qry=[temp_delete_qry UTF8String];
+        if (sqlite3_prepare16_v2(database, delete_qry, -1, &statement, NULL)==SQLITE_OK) {
+            NSLog(@"delete successfully");
+            return TRUE;
+        }
+        else{
+            return FALSE;
+        }
+        return TRUE;
+    */
+    
+    
+    
+    
+    
+    if (sqlite3_open([databasePath UTF8String], &database ) == SQLITE_OK) {
+        
+        //sqlite3_stmt *deleteStatement;
+        
+        NSString *deleteQuery = [NSString stringWithFormat:@"DELETE FROM tbl_Destination where id= %@",destination_id];
+        if (sqlite3_prepare_v2(database ,[deleteQuery  UTF8String], -1, &statement, NULL) == SQLITE_OK)
+        {
+            
+            //            //When binding parameters, index starts from 1 and not zero.
+            //            sqlite3_bind_text(deleteStatement, 1, [name UTF8String], -1, SQLITE_TRANSIENT);
+            
+            if (SQLITE_DONE == sqlite3_step(statement)){
+                
+                NSLog(@"contact deleted successfully");
+                return TRUE;
+            }
+        }
+        else{
+            
+            NSLog(@"not deleted..");
+            return FALSE;
+        }
+    }
+    NSLog(@"database not open");
+    sqlite3_reset(statement);
+    return FALSE;
+}
+
+-(BOOL)updateData:(NSString *)Dest_ID name:(NSString *)name lat:(NSString*)latitude lang:(NSString*)longitude
+{
+    NSLog(@"dest id::  %@",Dest_ID);
+    NSLog(@"name  %@",name);
+    
+    if(sqlite3_open([databasePath UTF8String],&database )==SQLITE_OK)
+    {
+        
+        NSString *query = [NSString stringWithFormat:@"UPDATE tbl_Destination SET name='%@',latitude='%@',longitude = '%@' where id='%@' ",name,latitude,longitude,Dest_ID];
+        //NSString *query=@"UPDATE tbl_Destination SET name='SuratTTT, Gujarat, India' , latitude = '21.195000' , longitude = '72.819443' where id='1' ";
+        const char *query_statement=[query UTF8String];
+                           
+                           if(sqlite3_prepare_v2(database, query_statement, -1, &statement, NULL)==SQLITE_OK)
+                           {
+                               while(sqlite3_step(statement) == SQLITE_DONE)
+                               {
+                                   return YES;
+                               }
+                               sqlite3_finalize(statement);
+                           }
+                           }
+    return FALSE;
+}
+
+@end
+
+//-(Boolean)delete:(NSString *)destination
+//{
+//    NSString *temp_delete_qry=@"delete from studentsDetail";
+//    const char *delete_qry=[temp_delete_qry UTF8String];
+//    if (sqlite3_prepare16_v2(database, delete_qry, -1, &statement, NULL)==SQLITE_OK) {
+//        NSLog(@"delete successfully");
+//        return TRUE;
+//    }
+//    else{
+//        return FALSE;
+//    }
+//    return TRUE;
+//}
